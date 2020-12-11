@@ -1,0 +1,3 @@
+imgkit
+opencv-python
+numpy
