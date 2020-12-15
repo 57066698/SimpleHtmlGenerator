@@ -34,11 +34,11 @@ class HtmlObj:
     def __init__(self):
         self.dic = {}
         self.parent = None
-        self.children = None  # will treat as child
+        self.children = []  # will treat as child
         self._layout = Layout(0, 0, 0, 0)
 
     def add(self, child):
-        self.children = child
+        self.children.append(child)
         child.parent = self
 
     @property
@@ -53,8 +53,6 @@ class HtmlObj:
             layout = self.layout
         else:
             layout = self.layout + layout
-
-        layout = layout + self.layout
 
         if self.parent:
             layout = self.parent.get_world_layout(layout)
@@ -84,17 +82,10 @@ class DivObj(HtmlObj):
         self.dic['height'] = height
         self.dic['background-color'] = color
         self.index = index
-        self.children = []
 
     @property
     def text_item(self):
         return None if len(self.children) == 0 else self.children[0]
-
-    def add(self, text_item):
-        if len(self.children) == 0:
-            self.children.append(text_item)
-        else:
-            self.children[0] = text_item
 
     def set_padding(self, left, top):
         """
@@ -125,8 +116,8 @@ class DivObj(HtmlObj):
             padding_top = 0 if 'padding-top' not in self.dic else self.dic['padding-top']
             padding_left = 0 if 'padding-left' not in self.dic else self.dic['padding-left']
             textObj.update_layout(padding_left, padding_top)
-            text_layout = textObj.layout
-            self.layout.make_contain(text_layout)
+            # text_layout = textObj.layout
+            #todo: self.layout.make_contain(text_layout)
 
     def get_css(self):
         css = "div.a%d{" % self.index
@@ -210,7 +201,6 @@ class PageObj(HtmlObj):
                     'height': body_height,
                     'margin-left': '0px',
                     'margin-top': '0px'}
-        self.children = []
 
     def add_Obj(self, obj: HtmlObj):
         self.children.append(obj)
@@ -244,9 +234,9 @@ if __name__ == "__main__":
     divObj1.add(textObj1)
     html.add_Obj(divObj1)
 
-    divObj2 = DivObj(2, width=200, height=100, color='#aa55aa')
+    divObj2 = DivObj(2, width=200, height=50, color='#aa55aa')
     textObj2 = TextObj(2, size=30, font="黑体", text="测试测试测试", color="#0000ff")
-    divObj2.set_padding(100, 20)
+    # divObj2.set_padding(100, 20)
     divObj2.add(textObj2)
     html.add_Obj(divObj2)
 
