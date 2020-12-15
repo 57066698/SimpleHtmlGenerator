@@ -1,3 +1,6 @@
 
-key = 'margin-left'
-print('margin' in key)
+a = []
+
+a[0] = 1
+
+print(a)
