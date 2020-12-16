@@ -1,7 +1,8 @@
 import os
 import sys
+import uuid
 import codecs
-from simpleHtmlGenerator.utils.string_count import str_count
+from simpleHtmlGenerator.utils.string_utils import str_count
 from simpleHtmlGenerator.utils.add_px import keyforpx
 
 class Layout:
@@ -32,6 +33,7 @@ class Layout:
 class HtmlObj:
 
     def __init__(self):
+        self.uuid = "a" + str(uuid.uuid4())[:8]
         self.dic = {}
         self.parent = None
         self.children = []  # will treat as child
@@ -76,12 +78,11 @@ class HtmlObj:
 """
 
 class DivObj(HtmlObj):
-    def __init__(self, index, width, height, color):
+    def __init__(self, width, height, color):
         super().__init__()
         self.dic['width'] = width
         self.dic['height'] = height
         self.dic['background-color'] = color
-        self.index = index
 
     @property
     def text_item(self):
@@ -120,7 +121,7 @@ class DivObj(HtmlObj):
             #todo: self.layout.make_contain(text_layout)
 
     def get_css(self):
-        css = "div.a%d{" % self.index
+        css = "div.a%s{" % self.uuid
         for key in self.dic:
             css += str(key)
             css += ": "
@@ -136,13 +137,13 @@ class DivObj(HtmlObj):
     def get_html(self):
         if not self.children is None:
             text_heml = self.text_item.get_html()
-            html = "<div class='a%d'>%s</div>\n" % (self.index, text_heml)
+            html = "<div class='a%s'>%s</div>\n" % (self.uuid, text_heml)
         else:
             html = "<div class='a%d'></div>\n"
         return html
 
     def __str__(self):
-        return 'DivObj: [index: %d, layout: %s]' % (self.index, str(self.layout))
+        return 'DivObj: [index: %s, layout: %s]' % (self.uuid, str(self.layout))
 
 
 """
@@ -151,12 +152,11 @@ class DivObj(HtmlObj):
 
 
 class TextObj(HtmlObj):
-    def __init__(self, index, font, size, text, color="#000000"):
+    def __init__(self, font, size, text, color="#000000"):
         super().__init__()
         self.dic['font-family'] = font
         self.dic['font-size'] = size
         self.dic['color'] = color
-        self.index = index
         self.text = text
 
     def update_layout(self, start_x, start_y):
@@ -173,7 +173,7 @@ class TextObj(HtmlObj):
         return int(self.dic['font-size'] * num)
 
     def get_css(self):
-        css = "p.a%d{" % self.index
+        css = "p.a%s{" % self.uuid
         for key in self.dic:
             css += str(key)
             css += ": "
@@ -183,7 +183,7 @@ class TextObj(HtmlObj):
         return css
 
     def get_html(self):
-        html = "<p class='a%d'>%s</p>" % (self.index, self.text)
+        html = "<p class='a%s'>%s</p>" % (self.uuid, self.text)
         return html
 
 
@@ -191,12 +191,13 @@ class TextObj(HtmlObj):
     base class
 """
 
-template = codecs.open("template.html", "r", "utf-8").read()
 
+template = codecs.open("template.html", "r", "utf-8").read()
 
 class PageObj(HtmlObj):
     def __init__(self, body_width, body_height):
         super().__init__()
+
         self.dic = {'width': body_width,
                     'height': body_height,
                     'margin-left': '0px',
@@ -229,13 +230,13 @@ if __name__ == "__main__":
     print("test....")
     html = PageObj(1080, 1920)
 
-    divObj1 = DivObj(1, width=400, height=50, color='#aaaa55')
-    textObj1 = TextObj(1, size=30, font="微软雅黑", text="测试中文", color="#ff0000")
+    divObj1 = DivObj(width=400, height=50, color='#aaaa55')
+    textObj1 = TextObj(size=30, font="微软雅黑", text="测试中文", color="#ff0000")
     divObj1.add(textObj1)
     html.add_Obj(divObj1)
 
-    divObj2 = DivObj(2, width=200, height=50, color='#aa55aa')
-    textObj2 = TextObj(2, size=30, font="仿宋_GB2312", text="测试中文", color="#0000ff")
+    divObj2 = DivObj(width=200, height=50, color='#aa55aa')
+    textObj2 = TextObj(size=30, font="仿宋_GB2312", text="测试中文", color="#0000ff")
     divObj2.set_margin(100, 20)
     divObj2.set_padding(100, 20)
     divObj2.add(textObj2)

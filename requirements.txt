@@ -1,3 +1,4 @@
 imgkit
 opencv-python
 numpy
+uuid

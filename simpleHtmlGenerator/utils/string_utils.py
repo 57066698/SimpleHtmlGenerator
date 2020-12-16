@@ -1,7 +1,7 @@
-# https://www.cnblogs.com/shuoliuchina/p/12431156.html
 import string
 
 def str_count(str):
+    # https://www.cnblogs.com/shuoliuchina/p/12431156.html
     '''找出字符串中的中英文、空格、数字、标点符号个数'''
     count_en = count_dg = count_sp = count_zh = count_pu = 0
 

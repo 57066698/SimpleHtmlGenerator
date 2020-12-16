@@ -1,6 +1,2 @@
-
-a = []
-
-a[0] = 1
-
-print(a)
+import uuid
+print("a"+str(uuid.uuid1())[:8])
