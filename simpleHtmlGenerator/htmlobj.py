@@ -103,11 +103,11 @@ class DivObj(HtmlObj):
 
     def update_layout(self, start_x, start_y):
         top = start_y
-        if 'margin_top' in self.dic:
-            top = top + self.dic['margin_top']
+        if 'margin-top' in self.dic:
+            top = top + self.dic['margin-top']
         left = start_x
-        if 'margin_left' in self.dic:
-            left = left + self.dic['margin_left']
+        if 'margin-left' in self.dic:
+            left = left + self.dic['margin-left']
 
         self._layout = Layout.from_xywh(left, top, self.dic['width'], self.dic['height'])
 
@@ -153,7 +153,7 @@ class DivObj(HtmlObj):
 class TextObj(HtmlObj):
     def __init__(self, index, font, size, text, color="#000000"):
         super().__init__()
-        self.dic['font'] = font
+        self.dic['font-family'] = font
         self.dic['font-size'] = size
         self.dic['color'] = color
         self.index = index
@@ -230,13 +230,14 @@ if __name__ == "__main__":
     html = PageObj(1080, 1920)
 
     divObj1 = DivObj(1, width=400, height=50, color='#aaaa55')
-    textObj1 = TextObj(1, size=30, font="黑体", text="测试中文", color="#ff0000")
+    textObj1 = TextObj(1, size=30, font="微软雅黑", text="测试中文", color="#ff0000")
     divObj1.add(textObj1)
     html.add_Obj(divObj1)
 
     divObj2 = DivObj(2, width=200, height=50, color='#aa55aa')
-    textObj2 = TextObj(2, size=30, font="黑体", text="测试测试测试", color="#0000ff")
-    # divObj2.set_padding(100, 20)
+    textObj2 = TextObj(2, size=30, font="仿宋_GB2312", text="测试中文", color="#0000ff")
+    divObj2.set_margin(100, 20)
+    divObj2.set_padding(100, 20)
     divObj2.add(textObj2)
     html.add_Obj(divObj2)
 
