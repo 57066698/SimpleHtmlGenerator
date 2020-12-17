@@ -1,0 +1,14 @@
+body:
+  width: 1080
+  height: 1920
+line:
+  line_width_percent: [0.1, 1.0]
+  line_height_multi_text: [1, 3]
+  line_left_margin_percent: [0, 1.0]
+  line_top_margin: [0, 20]
+  line_padding: 'free'
+text:
+  font_family: ['黑体', '宋体', '微软雅黑']
+  max_char_number: 10
+  font_size: [10, 30]
+  font_color: ['#000000']

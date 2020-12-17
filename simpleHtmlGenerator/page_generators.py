@@ -21,67 +21,94 @@ def random_text(num):
     text = "".join(text)
     return text
 
-class RangeRandomItem():
-    def __init__(self, low, up):
-        self.low = low
-        self.up = up
-
-    def random(self):
-        return random.randint(self.low, self.up)
-
-class SingleLineTextGenerator:
-    def __init__(self, fonts = ['宋体', '黑体', '微软雅黑'],
-                 font_size_range = (30, 50),
-                 chars_number = (1, 10),
-                 margin_top_range = (0, 10),
-                 margin_left_range = (0, 10),
-                 padding_top_range = (0, 10),
-                 padding_left_range = (0, 10)
+class TextGenerator:
+    def __init__(self,
+                 font_family,
+                 max_char_number,
+                 font_size,
+                 font_color,
+                 **kwargs
                  ):
-        self.fonts = fonts
-        self.chars_number_item = RangeRandomItem(*chars_number)
-        self.font_size_item = RangeRandomItem(*font_size_range)
-        self.margin_top_item = RangeRandomItem(*margin_top_range)
-        self.margin_left_item = RangeRandomItem(*margin_left_range)
-        self.padding_top_item = RangeRandomItem(*padding_top_range)
-        self.padding_left_item = RangeRandomItem(*padding_left_range)
+        self.font_family = font_family
+        self.max_char_number = max_char_number
+        self.font_size = font_size
+        self.font_color = font_color
 
     def gen(self):
-        # 先得到字，再找出边缘扩张，最后左上角位移
-        font_family = random.choice(self.fonts)
-        font_size = self.font_size_item.random()
-        chars_number = self.chars_number_item.random()
+        font = random.choice(self.font_family)
+        font_size = random.randint(self.font_size[0], self.font_size[1])
+        chars_number = random.randint(1, self.max_char_number)
         text = random_text(chars_number)
-        full, half = str_count(text)
-        text_width = int(full * font_size + half * font_size / 2)
 
-        top_margin = self.margin_top_item.random()
-        left_margin = self.margin_left_item.random()
+        textObj = TextObj(font, font_size, text)
+        textObj.update_layout(0, 0)
 
-        div_width = text_width + 100
-        div_height = text_width + 100
-        div_color = random.choice(["#ffffff", "#eeeeee", "dddddd", "cccccc", "bbbbbb", "aaaaaa"])
+        return textObj
 
-        divObj = DivObj(div_width, div_height, div_color)
-        divObj.set_margin(left_margin, top_margin)
+class SingleLineTextGenerator:
+    def __init__(self,
+                 text_args,
+                 body_width,
+                 line_width_percent,
+                 line_height_multi_text,
+                 line_left_margin_percent,
+                 line_top_margin,
+                 line_padding,
+                 **kwargs
+                 ):
+        self.text_gen = TextGenerator(**text_args)
+        self.body_width = body_width
+        self.line_width_percent = line_width_percent
+        self.line_left_margin_percent = line_left_margin_percent
+        self.line_padding = line_padding
+        self.line_height_multi_text = line_height_multi_text
+        self.line_top_margin = line_top_margin
 
-        textObj = TextObj(font_family, font_size, text)
+    def gen(self):
+        # 先得到字
+        textObj = self.text_gen.gen()
+        text_w, text_h = textObj.layout.width, textObj.layout.height
+
+        # 得到宽度
+        width_range = np.multiply(self.body_width, self.line_width_percent)
+        width_range = np.clip(width_range, text_w, self.body_width)
+        width = random.randint(int(width_range[0]), int(width_range[1]))
+
+        # 得到高度
+        height_range = np.multiply(text_h, self.line_height_multi_text)
+        height = random.randint(int(height_range[0]), int(height_range[1]))
+
+        # 得到margin
+        margin_left_range = [0, self.body_width - width]
+        margin_left = random.randint(margin_left_range[0], margin_left_range[1])
+        margin_top = random.randint(int(self.line_top_margin[0]), int(self.line_top_margin[1]))
+
+        # 得到padding
+        padding_left_range = [0, width - text_w]
+        padding_top_range = [0, height - text_h]
+        padding_left = random.randint(padding_left_range[0], padding_left_range[1])
+        padding_top = random.randint(padding_top_range[0], padding_top_range[1])
+
+        color = random.choice(["#ffffff", "#eeeeee", "dddddd", "cccccc", "bbbbbb", "aaaaaa"])
+
+        divObj = DivObj(width, height, color, margin_top, margin_left, padding_top, padding_left)
         divObj.add(textObj)
 
         return divObj, textObj
 
-
 class TextPageGenerator:
-    def __init__(self, save_path):
+    def __init__(self, save_path, config):
         self.save_path = save_path
-        self.lineGen = SingleLineTextGenerator()
+        self.lineGen = SingleLineTextGenerator(config['text'], config['body']['width'], **config['line'])
+        self.width = config['body']['width']
+        self.height = config['body']['height']
 
-    def gen(self, num=10):
+    def gen(self, num=1):
         for i in range(num):
             filename = str(i)
-            html = PageObj(1080, 1920)
+            html = PageObj(self.width, self.height)
             texts = []
-            for j in range(20):
+            for j in range(10):
                 div, text = self.lineGen.gen()
                 html.add(div)
                 texts.append(text)
@@ -98,7 +125,10 @@ class TextPageGenerator:
                 f.write(str(html))
 
 if __name__ == "__main__":
-    gen = TextPageGenerator("../output")
+
+    import yaml
+    with open('../conf/singleline.yaml') as f:
+        conf = yaml.load(f, Loader=yaml.FullLoader)
+
+    gen = TextPageGenerator("../output", conf)
     gen.gen()
-
-

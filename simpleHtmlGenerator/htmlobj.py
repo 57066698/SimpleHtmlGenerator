@@ -24,6 +24,14 @@ class Layout:
         self.y1 = min(self.y1, layout.y1)
         self.y2 = max(self.y2, layout.y2)
 
+    @property
+    def width(self):
+        return self.x2 - self.x1
+
+    @property
+    def height(self):
+        return self.y2 - self.y1
+
     @classmethod
     def from_xywh(cls, x, y, w, h):
         return Layout(x, y, x+w, y+h)
@@ -74,33 +82,31 @@ class HtmlObj:
             self.children = None
 
 """
-    一个块 有背景色 内含一个text
+    一个块 有背景色
 """
 
 class DivObj(HtmlObj):
-    def __init__(self, width, height, color):
+    def __init__(self,
+                 width,
+                 height,
+                 color,
+                 margin_top,
+                 margin_left,
+                 padding_top,
+                 padding_left,
+                 **kwargs):
         super().__init__()
         self.dic['width'] = width
         self.dic['height'] = height
         self.dic['background-color'] = color
+        self.dic['margin-left'] = margin_left
+        self.dic['margin-top'] = margin_top
+        self.dic['padding-left'] = padding_left
+        self.dic['padding-top'] = padding_top
 
     @property
     def text_item(self):
         return None if len(self.children) == 0 else self.children[0]
-
-    def set_padding(self, left, top):
-        """
-            内边界
-        """
-        self.dic['padding-left'] = int(left)
-        self.dic['padding-top'] = int(top)
-
-    def set_margin(self, left, top):
-        """
-            外边界
-        """
-        self.dic['margin-left'] = int(left)
-        self.dic['margin-top'] = int(top)
 
     def update_layout(self, start_x, start_y):
         top = start_y
@@ -223,28 +229,3 @@ class PageObj(HtmlObj):
         html_str = str.replace(html_str, "css_token", css_str)
         html_str = str.replace(html_str, "body_token", body_str)
         return html_str
-
-
-
-if __name__ == "__main__":
-    print("test....")
-    html = PageObj(1080, 1920)
-
-    divObj1 = DivObj(width=400, height=50, color='#aaaa55')
-    textObj1 = TextObj(size=30, font="微软雅黑", text="测试中文", color="#ff0000")
-    divObj1.add(textObj1)
-    html.add_Obj(divObj1)
-
-    divObj2 = DivObj(width=200, height=50, color='#aa55aa')
-    textObj2 = TextObj(size=30, font="仿宋_GB2312", text="测试中文", color="#0000ff")
-    divObj2.set_margin(100, 20)
-    divObj2.set_padding(100, 20)
-    divObj2.add(textObj2)
-    html.add_Obj(divObj2)
-
-    html.update_layout()
-
-    print(textObj1.get_world_layout())
-    print(textObj2.get_world_layout())
-    with codecs.open("../result.html", "w", encoding='utf-8') as f:
-        f.write(str(html))
