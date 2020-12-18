@@ -8,6 +8,7 @@ from pathlib import Path
 from simpleHtmlGenerator.htmlobj import *
 from simpleHtmlGenerator.utils.alphabets import alphabet
 from simpleHtmlGenerator.utils.string_utils import str_count
+from utils import io
 
 import random
 
@@ -41,7 +42,7 @@ class TextGenerator:
         text = random_text(chars_number)
 
         textObj = TextObj(font, font_size, text)
-        textObj.update_layout(0, 0)
+        textObj.update_bbox(0, 0)
 
         return textObj
 
@@ -67,7 +68,7 @@ class SingleLineTextGenerator:
     def gen(self):
         # 先得到字
         textObj = self.text_gen.gen()
-        text_w, text_h = textObj.layout.width, textObj.layout.height
+        text_w, text_h = textObj.bbox.width, textObj.bbox.height
 
         # 得到宽度
         width_range = np.multiply(self.body_width, self.line_width_percent)
@@ -89,9 +90,9 @@ class SingleLineTextGenerator:
         padding_left = random.randint(padding_left_range[0], padding_left_range[1])
         padding_top = random.randint(padding_top_range[0], padding_top_range[1])
 
-        color = random.choice(["#ffffff", "#eeeeee", "dddddd", "cccccc", "bbbbbb", "aaaaaa"])
+        color = random.choice(["#ffffff", "#eeeeee", "#dddddd", "#cccccc", "#bbbbbb", "#aaaaaa"])
 
-        divObj = DivObj(width, height, color, margin_top, margin_left, padding_top, padding_left)
+        divObj = DivObj(width - padding_left, height - padding_top, color, margin_top, margin_left, padding_top, padding_left)
         divObj.add(textObj)
 
         return divObj, textObj
@@ -113,16 +114,14 @@ class TextPageGenerator:
                 html.add(div)
                 texts.append(text)
 
-            html.update_layout()
+            html.update_bbox()
 
-            with open(os.path.join(self.save_path, "%s.txt" % filename), "w+") as f:
-                for text in texts:
-                    layout = text.get_world_layout()
-                    text_str = text.text
-                    f.write(str(layout.x1) + " " + str(layout.y1) + " " + str(layout.x2) + " " + str(layout.y2) + " " + str(text_str) + '\n')
+            io.save_html(os.path.join(self.save_path, "%s.html" % filename), html)
 
-            with codecs.open(os.path.join(self.save_path, "%s.html" % filename), "w", encoding='utf-8') as f:
-                f.write(str(html))
+            bboxs = [text.get_world_bbox() for text in texts]
+            texts = [text.text for text in texts]
+            io.save_anno(os.path.join(self.save_path, "%s.txt" % filename), bboxs, texts)
+
 
 if __name__ == "__main__":
 
