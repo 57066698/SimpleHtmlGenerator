@@ -1,9 +1,16 @@
 body:
   width: 1080
   height: 1920
-line:
+text_line:
+  line_max_text: 10
+  line_text_gap_range: [20, 50]
   line_width_percent: [0.1, 1.0]
-  line_height_multi_text: [1, 3]
+  line_height_multi_text: [1.2, 1.7]
+  line_left_margin_percent: [0, 1.0]
+  line_top_margin: [0, 20]
+  line_padding: 'free'
+input_line:
+  line_height_multi_text: [1.2, 1.5]
   line_left_margin_percent: [0, 1.0]
   line_top_margin: [0, 20]
   line_padding: 'free'
@@ -12,3 +19,7 @@ text:
   max_char_number: 10
   font_size: [10, 30]
   font_color: ['#000000']
+input:
+  input_width_range: [100, 300]
+  input_height_range: [20, 30]
+  input_margin_left_range: [5, 30]

@@ -1,8 +1,23 @@
 import string
+import numpy as np
+from simpleHtmlGenerator.utils.alphabets import alphabet
+
+def is_regular(uchar):
+    is_chinese = uchar >= u'\u4e00' and uchar <= u'\u9fa5'
+    is_number = uchar >= u'\u0030' and uchar <= u'\u0039'
+    is_english = (uchar >= u'\u0041' and uchar <= u'\u005a') or (uchar >= u'\u0061' and uchar <= u'\u007a')
+    return is_english or is_chinese or is_number
+
+alphabet_arr = np.array(list(alphabet))
+alphabet_arr_regular = np.fromiter((x for x in alphabet_arr if is_regular(x)), dtype=alphabet_arr.dtype)
+
+def random_text(num):
+    text = np.random.choice(alphabet_arr_regular, num)
+    text = "".join(text)
+    return text
 
 def str_count(str):
-    # https://www.cnblogs.com/shuoliuchina/p/12431156.html
-    '''找出字符串中的中英文、空格、数字、标点符号个数'''
+
     count_en = count_dg = count_sp = count_zh = count_pu = 0
 
     for s in str:

@@ -13,23 +13,33 @@
             margin-left:50px;
             width: 400px;
             height: 50px;
-            background-color: black;
+            background-color: white;
         }
-        p.a0 {
-            margin-left:100px;
+        span.a0 {
+            margin-left:0px;
             color:red;
             font-size:30px;
         }
-        p.a1 {
-            font-size:15px;
-            margin-left:10px;
-            color:#666666;
-            font-size:40px;
+        input.a1 {
+            line-height: 50px;
+            width: 300px;
+            border: 3px solid #666666;
+            color: red;
+        }
+        select.a1 {
+            line-height: 50px;
+            width: 300px;
+            border-top: 1px solid #666666;
+            border-bottom: 1px solid #666666;
+            border-left: 1px solid #666666;
+            border-right: 1px solid #666666;
+            background-color: #ffffff
         }
     </style>
 </head>
 
 <body>
-<div class="a0"><p class="a0">中文测试1</p></div>
-<p class="a1">中文测试2</p>
+<div class="a0"><span class="a0">输入测试</span><span class="a0">美术1234</span></div>
+<input class="a1" type="text" name="fname" value="测试默认值1"/>
+<select class="a1"><option>test1</option><option>test2</option><option>test3</option></select>
 </body>

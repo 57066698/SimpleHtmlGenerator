@@ -67,6 +67,14 @@ class HtmlObj:
 
         return bbox
 
+    @property
+    def margin_left(self):
+        return self.dic['margin-left']
+
+    @margin_left.setter
+    def margin_left(self, value):
+        self.dic['margin-left'] = value
+
     def get_css(self):
         raise NotImplementedError()
 
@@ -80,7 +88,7 @@ class HtmlObj:
             self.children = None
 
 """
-    一个块 有背景色
+    一行 有背景色
 """
 
 class DivObj(HtmlObj):
@@ -102,10 +110,6 @@ class DivObj(HtmlObj):
         self.dic['padding-left'] = padding_left
         self.dic['padding-top'] = padding_top
 
-    @property
-    def text_item(self):
-        return None if len(self.children) == 0 else self.children[0]
-
     def update_bbox(self, start_x, start_y):
 
         top = start_y + self.dic['margin-top']
@@ -115,13 +119,12 @@ class DivObj(HtmlObj):
 
         self._bbox = Bbox.from_xywh(left, top, real_width, real_height)
 
-        if len(self.children) > 0:
-            textObj = self.children[0]
-            padding_top = 0 if 'padding-top' not in self.dic else self.dic['padding-top']
-            padding_left = 0 if 'padding-left' not in self.dic else self.dic['padding-left']
-            textObj.update_bbox(padding_left, padding_top)
-            # text_layout = textObj.layout
-            #todo: self.layout.make_contain(text_layout)
+        anchor_x = self.dic['padding-left']
+        anchor_y = self.dic['padding-top']
+
+        for obj in self.children:
+            obj.update_bbox(anchor_x, anchor_y)
+            anchor_x = obj.bbox.x2
 
     def get_css(self):
         css = "div.a%s{" % self.uuid
@@ -132,51 +135,43 @@ class DivObj(HtmlObj):
             css += "; "
         css += "}\n"
 
-        if not self.children is None:
-            css += self.text_item.get_css()
+        for obj in self.children:
+            css += obj.get_css()
 
         return css
 
     def get_html(self):
-        if not self.children is None:
-            text_heml = self.text_item.get_html()
-            html = "<div class='a%s'>%s</div>\n" % (self.uuid, text_heml)
-        else:
-            html = "<div class='a%d'></div>\n"
+        html = "<div class='a%s'>\n" % self.uuid
+        for obj in self.children:
+            html += obj.get_html()
+        html += "</div>"
         return html
 
     def __str__(self):
         return 'DivObj: [index: %s, layout: %s]' % (self.uuid, str(self.bbox))
 
-
 """
-    一行文字
+    几个文字
 """
-
 
 class TextObj(HtmlObj):
-    def __init__(self, font, size, text, color="#000000"):
+    def __init__(self, font, size, text, color="#000000", margin_left=0):
         super().__init__()
         self.dic['font-family'] = font
         self.dic['font-size'] = size
         self.dic['color'] = color
+        self.dic['margin-left'] = margin_left
         self.text = text
 
     def update_bbox(self, start_x, start_y):
-        self._bbox = Bbox.from_xywh(start_x, start_y, self.width, self.height)
-
-    @property
-    def height(self):
-        return self.dic['font-size']
-
-    @property
-    def width(self):
+        height = self.dic['font-size']
         num_ch, num_other = str_count(self.text)
         num = 1 * num_ch + 0.5 * num_other
-        return int(self.dic['font-size'] * num)
+        width = int(self.dic['font-size'] * num)
+        self._bbox = Bbox.from_xywh(start_x+self.dic['margin-left'], start_y, width, height)
 
     def get_css(self):
-        css = "p.a%s{" % self.uuid
+        css = "span.a%s{" % self.uuid
         for key in self.dic:
             css += str(key)
             css += ": "
@@ -186,8 +181,52 @@ class TextObj(HtmlObj):
         return css
 
     def get_html(self):
-        html = "<p class='a%s'>%s</p>" % (self.uuid, self.text)
+        html = "<span class='a%s'>%s</span>" % (self.uuid, self.text)
         return html
+
+    @property
+    def font_size(self):
+        return self.dic['font-size']
+
+    def copy(self):
+        newObj = TextObj(self.dic['font-family'], self.dic['font-size'], self.text, self.dic['color'])
+        newObj.dic = self.dic.copy()
+        return newObj
+
+    def __str__(self):
+        return "TextObj: " + str(self.bbox) + " " + self.text
+
+"""
+    输入框
+"""
+
+class InputObj(HtmlObj):
+    def __init__(self, width, height, default_text, board_size, board_color, text_color):
+        super().__init__()
+        self.dic['width'] = width
+        self.dic['line-height'] = height
+        self.dic['border'] = "%dpx solid %s" % (board_size, board_color)
+
+        self.default_text = default_text
+        self.dic['color'] = text_color
+
+    def update_bbox(self, start_x, start_y):
+        self._bbox = Bbox.from_xywh(start_x, start_y, self.dic['width'], self.dic['line-height'])
+
+    def get_css(self):
+        css = "input.a%s{" % self.uuid
+        for key in self.dic:
+            css += str(key)
+            css += ": "
+            css += keyforpx(key, self.dic[key])
+            css += "; "
+        css += "}\n"
+        return css
+
+    def get_html(self):
+        html = "<p class='a%s' value='%s'></p>" % (self.uuid, self.default_text)
+        return html
+
 
 """
     base class
@@ -226,21 +265,24 @@ class PageObj(HtmlObj):
         return html_str
 
 if __name__ == "__main__":
-    page = PageObj(200, 200)
-    line = DivObj(120, 50, "#eeeeee", 0, 0, 10, 0)
+    page = PageObj(1000, 1000)
+    line = DivObj(300, 50, "#eeeeee", 0, 0, 10, 0)
     text = TextObj("黑体", 20, "测试123")
+    text12 = TextObj("宋体", 20, "测试数字")
     line2 = DivObj(150, 30, "#ffff33", 0, 0, 0, 0)
     text2 = TextObj("宋体", 20, "测试456")
     line.add(text)
+    line.add(text12)
     page.add(line)
     line2.add(text2)
     page.add(line2)
     page.update_bbox()
 
     text_bbox = text.get_world_bbox()
+    text_bbox12 = text12.get_world_bbox()
     bbox = text2.get_world_bbox()
     from utils import io
 
     io.save_html(os.path.join("../output", "0.html"), page)
-    io.save_anno(os.path.join("../output", "0.txt"), [text_bbox, bbox], \
-                 [text.text, text2.text])
+    io.save_anno(os.path.join("../output", "0.txt"), [text_bbox, text_bbox12, bbox], \
+                 [text.text, text12.text, text2.text])
