@@ -23,3 +23,5 @@ input:
   input_width_range: [100, 300]
   input_height_range: [20, 30]
   input_margin_left_range: [5, 30]
+  input_board_range: [1, 2]
+  text_colors: ['#ff0000', '#ffffff']

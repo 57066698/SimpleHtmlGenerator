@@ -7,35 +7,44 @@ from simpleHtmlGenerator.utils.string_utils import random_text
 import random
 
 
-
 def html_to_jpg(html_str, jpg_path):
     imgkit.from_string(html_str, jpg_path)
 
-def get_expand_text_bbox(textObj):
 
+def get_expand_text_bbox(textObj):
     bbox = textObj.get_world_bbox()
     font_size = textObj.font_size
 
-    bbox_expand = Bbox(bbox.x1 - int(font_size/2),
-                bbox.y1 - int(font_size/8),
-                bbox.x2 + int(font_size/2),
-                bbox.y2 + int(font_size/4))
+    bbox_expand = Bbox(bbox.x1 - int(font_size / 2),
+                       bbox.y1 - int(font_size / 8),
+                       bbox.x2 + int(font_size / 2),
+                       bbox.y2 + int(font_size / 4))
     return bbox_expand
 
-class TextGenerator:
-    def __init__(self,
-                 font_family,
-                 max_char_number,
-                 font_size,
-                 font_color,
-                 **kwargs
-                 ):
-        self.font_family = font_family
-        self.max_char_number = max_char_number
-        self.font_size = font_size
-        self.font_color = font_color
 
-    def gen(self):
+class TextGenerator:
+
+    @classmethod
+    def random_props(cls, font_family, font_size, font_color, **kwargs):
+        font = random.choice(font_family)
+        font_size = random.randint(font_size[0], font_size[1])
+        font_color = random.choice(font_color)
+        return (font, font_size, font_color)
+
+    @classmethod
+    def random_text(cls, max_char_num, **kwargs):
+        chars_num = random.randint(1, max_char_num)
+        text = random_text(chars_num)
+        return text
+
+    @classmethod
+    def get_obj(cls, text, font, font_size, **kwargs):
+        textObj = TextObj(font, font_size, text)
+        textObj.update_bbox(0, 0)
+        return
+
+    @classmethod
+    def make(cls, font, font_size, chars_number, text):
         font = random.choice(self.font_family)
         font_size = random.randint(self.font_size[0], self.font_size[1])
         chars_number = random.randint(1, self.max_char_number)
@@ -52,18 +61,41 @@ class TextGenerator:
         newObj.text = text
         return newObj
 
+
 class InputGenerator:
     def __init__(self,
-                 input_max_width,
+                 text_args,
+                 input_width_range,
                  input_height_range,
                  input_margin_left_range,
+                 input_board_range,
+                 text_colors,
+                 **kwargs
                  ):
-        self.input_max_width = input_max_width
+        self.text_args = text_args
+        self.input_width_range = input_width_range
         self.input_height_range = input_height_range
         self.input_margin_left_range = input_margin_left_range
+        self.input_board_range = input_board_range
+        self.text_colors = text_colors
 
-    def gen(self):
-        width = random.randint(self.input_max_width[0], self.input_max_width[1])
+    def gen(self, max_width=0):
+        max_width = min(self.input_width_range[1], max_width) if max_width != 0 else self.input_width_range[1]
+        width = random.randint(self.input_width_range[0], min(self.input_width_range[1], max_width))
+        height = random.randint(self.input_height_range[0], self.input_height_range[1])
+        board_size = random.randint(self.input_board_range[0], self.input_board_range[1])
+        margin_left = random.randint(self.input_margin_left_range[0], self.input_margin_left_range[1])
+
+        font = random.choice(self.text_args['font_family'])
+        font_size = random.randint(self.text_args['font_size'][0], self.text_args['font_size'][1])
+        chars_number = random.randint(1, self.text_args['max_char_number'])
+        text = random_text(chars_number)
+        text_color = random.choice(self.text_colors)
+
+        inputObj = InputObj(width, height, font, font_size, text, board_size, "#666666", text_color)
+        inputObj.margin_left = margin_left
+        return inputObj
+
 
 class LineTextGenerator:
     def __init__(self,
@@ -152,37 +184,65 @@ class LineTextGenerator:
 
         return divObj, textObj_list
 
-class InputTextGenerator:
+
+class InputLineGenerator:
     def __init__(self,
                  text_args,
-                 input_max_width,
-                 input_margin_left_range,
+                 input_args,
+                 max_width,
                  line_height_multi_text,
                  line_left_margin_percent,
                  line_top_margin,
                  line_padding):
-        self.text_gen = text_args
-        self.input_max_width = input_max_width
-        self.input_margin_left_range = input_margin_left_range
+        self.text_gen = TextGenerator(**text_args)
+        self.input_gen = InputGenerator(text_args, **input_args)
+        self.max_width = max_width
         self.line_height_multi_text = line_height_multi_text
         self.line_left_margin_percent = line_left_margin_percent
         self.line_top_margin = line_top_margin
         self.line_padding = line_padding
 
-    def gen(self):
-
+    def gen(self, max_width):
         textObj = self.text_gen.gen()
         textObj.update_bbox(0, 0)
         anchor_x = textObj.bbox.x2
 
-        inputObj
-        anchor_x += random.randint(self.input_margin_left_range[0], self.input_margin_left_range[1])
+        input_max_width = max_width - anchor_x
+        inputObj = self.input_gen.gen(input_max_width)
+        inputObj.update_bbox(anchor_x, 0)
 
+        content_width = inputObj.bbox.x2
+        content_height = max(textObj.bbox.y2, inputObj.bbox.y2)
+
+        width = random.randint(content_width, self.max_width)
+        height_range = np.multiply(content_height, self.line_height_multi_text)
+        height = random.randint(int(height_range[0]), int(height_range[1]))
+
+        margin_left_range = [0, self.max_width - width]
+        margin_left = random.randint(margin_left_range[0], margin_left_range[1])
+        margin_top = random.randint(int(self.line_top_margin[0]), int(self.line_top_margin[1]))
+
+        padding_left_range = [0, width - content_width]
+        padding_top_range = [0, height - content_height]
+        padding_left = random.randint(padding_left_range[0], padding_left_range[1])
+        padding_top = random.randint(padding_top_range[0], padding_top_range[1])
+
+        color = random.choice(["#ffffff", "#eeeeee", "#dddddd", "#cccccc", "#bbbbbb", "#aaaaaa"])
+
+        divObj = DivObj(width - padding_left, height - padding_top, color, margin_top, margin_left, padding_top,
+                        padding_left)
+
+        divObj.add(textObj)
+        divObj.add(inputObj)
+
+        return divObj, textObj, inputObj
 
 
 class TextPageGenerator:
     def __init__(self, config):
         self.lineGen = LineTextGenerator(config['text'], config['body']['width'], **config['text_line'])
+        self.inputLineGen = InputLineGenerator(config['text'], config['input'], config['body']['width'],
+                                               **config['input_line'])
         self.width = config['body']['width']
         self.height = config['body']['height']
 
@@ -192,12 +252,13 @@ class TextPageGenerator:
 
         anchor_y = 0
         for j in range(100):
-            div, textObj_list = self.lineGen.gen()
+            # div, textObj_list = self.lineGen.gen()
+            div, textObj, _ = self.inputLineGen.gen(self.width)
             div.update_bbox(0, anchor_y)
             anchor_y = div.bbox.y2
 
             html.add(div)
-            textObj_all = textObj_all + textObj_list
+            textObj_all = textObj_all + [textObj]
 
             if anchor_y >= self.height:
                 break
@@ -209,10 +270,11 @@ class TextPageGenerator:
 
         return html, bboxs, textObj_all
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     import yaml
-    with open('../conf/singleline.yaml') as f:
+
+    with open('../conf/singleline.yaml', encoding='utf-8') as f:
         conf = yaml.load(f, Loader=yaml.FullLoader)
 
     gen = TextPageGenerator(conf)

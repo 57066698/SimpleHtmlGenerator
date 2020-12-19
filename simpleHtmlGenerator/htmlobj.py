@@ -201,12 +201,13 @@ class TextObj(HtmlObj):
 """
 
 class InputObj(HtmlObj):
-    def __init__(self, width, height, default_text, board_size, board_color, text_color):
+    def __init__(self, width, height, font_family, font_size, default_text, board_size, board_color, text_color):
         super().__init__()
         self.dic['width'] = width
         self.dic['line-height'] = height
         self.dic['border'] = "%dpx solid %s" % (board_size, board_color)
-
+        self.dic['font-family'] = font_family
+        self.dic['font-size'] = font_size
         self.default_text = default_text
         self.dic['color'] = text_color
 
@@ -224,7 +225,7 @@ class InputObj(HtmlObj):
         return css
 
     def get_html(self):
-        html = "<p class='a%s' value='%s'></p>" % (self.uuid, self.default_text)
+        html = "<input class='a%s' value='%s'></p>" % (self.uuid, self.default_text)
         return html
 
 
