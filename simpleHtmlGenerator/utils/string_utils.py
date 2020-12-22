@@ -38,3 +38,9 @@ def str_count(str):
             count_pu += 1
 
     return count_zh, count_en + count_dg + count_sp + count_pu
+
+def get_text_width(text, font_size):
+    num_ch, num_other = str_count(text)
+    num = 1 * num_ch + 0.5 * num_other
+    width = int(font_size * num)
+    return width

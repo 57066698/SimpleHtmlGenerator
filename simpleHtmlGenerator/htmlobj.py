@@ -2,7 +2,7 @@ import os
 import sys
 import uuid
 import codecs
-from simpleHtmlGenerator.utils.string_utils import str_count
+from simpleHtmlGenerator.utils import string_utils
 from simpleHtmlGenerator.utils.add_px import keyforpx
 
 class Bbox:
@@ -38,9 +38,18 @@ class Bbox:
 
 class HtmlObj:
 
-    def __init__(self):
+    def __init__(self,
+                 width=0,
+                 height=0,
+                 margin_left=0,
+                 margin_top=0,
+                 padding_left=0,
+                 padding_top=0,
+                 **kwargs
+                 ):
         self.uuid = "a" + str(uuid.uuid4())[:8]
-        self.dic = {}
+        self.dic = {'width':width, 'height':height, 'padding-left':padding_left,
+                    'padding-top':padding_top, 'margin-left':margin_left, 'margin-top':margin_top}
         self.parent = None
         self.children = []  # will treat as child
         self._bbox = Bbox(0, 0, 0, 0)
@@ -54,7 +63,8 @@ class HtmlObj:
         return self._bbox
 
     def update_bbox(self, start_x, start_y):
-        raise NotImplementedError()
+        self._bbox = Bbox.from_xywh(start_x + self.dic['margin-left'], start_y+self.dic['margin-top'],
+                          self.dic['padding-left'] + self.dic['width'], self.dic['padding-top'] + self.dic['height'])
 
     def get_world_bbox(self, bbox=None):
         if bbox is None:
@@ -68,12 +78,12 @@ class HtmlObj:
         return bbox
 
     @property
-    def margin_left(self):
-        return self.dic['margin-left']
+    def width(self):
+        return self.dic['padding-left'] + self.dic['width']
 
-    @margin_left.setter
-    def margin_left(self, value):
-        self.dic['margin-left'] = value
+    @property
+    def height(self):
+        return self.dic['padding-top'] + self.dic['height']
 
     def get_css(self):
         raise NotImplementedError()
@@ -87,44 +97,16 @@ class HtmlObj:
         if self.children:
             self.children = None
 
-"""
-    一行 有背景色
-"""
+    def get_text_world_bbox(self):
+        return self.get_world_bbox()
 
-class DivObj(HtmlObj):
+class ContainerObj(HtmlObj):
     def __init__(self,
-                 width,
-                 height,
-                 color,
-                 margin_top,
-                 margin_left,
-                 padding_top,
-                 padding_left,
-                 **kwargs):
-        super().__init__()
-        self.dic['width'] = width
-        self.dic['height'] = height
-        self.dic['background-color'] = color
-        self.dic['margin-left'] = margin_left
-        self.dic['margin-top'] = margin_top
-        self.dic['padding-left'] = padding_left
-        self.dic['padding-top'] = padding_top
-
-    def update_bbox(self, start_x, start_y):
-
-        top = start_y + self.dic['margin-top']
-        left = start_x + self.dic['margin-left']
-        real_width = self.dic['width'] + self.dic['padding-left']
-        real_height = self.dic['height'] + self.dic['padding-top']
-
-        self._bbox = Bbox.from_xywh(left, top, real_width, real_height)
-
-        anchor_x = self.dic['padding-left']
-        anchor_y = self.dic['padding-top']
-
-        for obj in self.children:
-            obj.update_bbox(anchor_x, anchor_y)
-            anchor_x = obj.bbox.x2
+                 background_color = "#ffffff",
+                 **kwargs
+                 ):
+        super(ContainerObj, self).__init__(**kwargs)
+        self.dic['background-color'] = background_color
 
     def get_css(self):
         css = "div.a%s{" % self.uuid
@@ -150,25 +132,48 @@ class DivObj(HtmlObj):
     def __str__(self):
         return 'DivObj: [index: %s, layout: %s]' % (self.uuid, str(self.bbox))
 
+class VerticalDivObj(ContainerObj):
+
+    def update_bbox(self, start_x, start_y):
+
+        super().update_bbox(start_x, start_y)
+
+        anchor_x = self.dic['padding-left']
+        anchor_y = self.dic['padding-top']
+
+        for obj in self.children:
+            obj.update_bbox(anchor_x, anchor_y)
+            anchor_y = obj.bbox.y2
+
+class HorizontalDivObj(ContainerObj):
+
+    def update_bbox(self, start_x, start_y):
+
+        super().update_bbox(start_x, start_y)
+
+        anchor_x = self.dic['padding-left']
+        anchor_y = self.dic['padding-top']
+
+        for obj in self.children:
+            obj.update_bbox(anchor_x, anchor_y)
+            anchor_x = obj.bbox.x2
+
 """
     几个文字
 """
 
 class TextObj(HtmlObj):
-    def __init__(self, font, size, text, color="#000000", margin_left=0):
-        super().__init__()
+    def __init__(self, font, size, text, color="#000000", **kwargs):
+        super().__init__(**kwargs)
         self.dic['font-family'] = font
         self.dic['font-size'] = size
         self.dic['color'] = color
-        self.dic['margin-left'] = margin_left
         self.text = text
 
     def update_bbox(self, start_x, start_y):
-        height = self.dic['font-size']
-        num_ch, num_other = str_count(self.text)
-        num = 1 * num_ch + 0.5 * num_other
-        width = int(self.dic['font-size'] * num)
-        self._bbox = Bbox.from_xywh(start_x+self.dic['margin-left'], start_y, width, height)
+        self.dic['height'] = self.dic['font-size']
+        self.dic['width'] = string_utils.get_text_width(self.text, self.dic['font-size'])
+        super().update_bbox(start_x, start_y)
 
     def get_css(self):
         css = "span.a%s{" % self.uuid
@@ -188,11 +193,6 @@ class TextObj(HtmlObj):
     def font_size(self):
         return self.dic['font-size']
 
-    def copy(self):
-        newObj = TextObj(self.dic['font-family'], self.dic['font-size'], self.text, self.dic['color'])
-        newObj.dic = self.dic.copy()
-        return newObj
-
     def __str__(self):
         return "TextObj: " + str(self.bbox) + " " + self.text
 
@@ -201,18 +201,13 @@ class TextObj(HtmlObj):
 """
 
 class InputObj(HtmlObj):
-    def __init__(self, width, height, font_family, font_size, default_text, board_size, board_color, text_color):
-        super().__init__()
-        self.dic['width'] = width
-        self.dic['line-height'] = height
+    def __init__(self, font_family, font_size, default_text, board_size, board_color, text_color, **kwargs):
+        super().__init__(**kwargs)
         self.dic['border'] = "%dpx solid %s" % (board_size, board_color)
         self.dic['font-family'] = font_family
         self.dic['font-size'] = font_size
-        self.default_text = default_text
+        self.text = default_text
         self.dic['color'] = text_color
-
-    def update_bbox(self, start_x, start_y):
-        self._bbox = Bbox.from_xywh(start_x, start_y, self.dic['width'], self.dic['line-height'])
 
     def get_css(self):
         css = "input.a%s{" % self.uuid
@@ -223,12 +218,24 @@ class InputObj(HtmlObj):
             css += "; "
         css += "}\n"
         return css
+    
+    def update_bbox(self, start_x, start_y):
+        width = max(self.dic['width'], string_utils.get_text_width(self.text, self.dic['font-size']))
+        height = max(self.dic['height'], self.dic['font-size'])
+        self.dic['width'] = width
+        self.dic['height'] = height
+        super(InputObj, self).update_bbox(start_x, start_y)
 
     def get_html(self):
-        html = "<input class='a%s' value='%s'></p>" % (self.uuid, self.default_text)
+        html = "<input class='a%s' value='%s'></p>" % (self.uuid, self.text)
         return html
 
-
+    def get_text_world_bbox(self):
+        height = self.dic['font-size']
+        width = string_utils.get_text_width(self.text, self.dic['font-size'])
+        bbox = Bbox.from_xywh(self.dic['margin-left'], self.dic['margin-top'], width, height)
+        world_bbox = self.get_world_bbox(bbox)
+        return world_bbox
 """
     base class
 """
@@ -248,11 +255,9 @@ class PageObj(HtmlObj):
         self.children.append(obj)
 
     def update_bbox(self, start_x=0, start_y=0):
-        y_anchor = 0
         for child in self.children:
-            child.update_bbox(0, y_anchor)
-            y_anchor = child.bbox.y2
-        self._layout = Bbox.from_xywh(0, 0, self.dic['width'], y_anchor)
+            child.update_bbox(0, 0)
+        self._bbox = Bbox.from_xywh(0, 0, self.dic['width'], self.dic['height'])
 
     def __str__(self):
         html_str = str(template)
@@ -266,24 +271,27 @@ class PageObj(HtmlObj):
         return html_str
 
 if __name__ == "__main__":
-    page = PageObj(1000, 1000)
-    line = DivObj(300, 50, "#eeeeee", 0, 0, 10, 0)
+    page = PageObj(500, 500)
+    v_con = VerticalDivObj(width=500, height=500)
+    page.add(v_con)
+    line = HorizontalDivObj(background_color="#eeeeee", width=300, height=50, padding_left=10)
     text = TextObj("黑体", 20, "测试123")
-    text12 = TextObj("宋体", 20, "测试数字")
-    line2 = DivObj(150, 30, "#ffff33", 0, 0, 0, 0)
+    input = InputObj("宋体", 20, "输入内容", 1, board_color="#666666", text_color="#ff0000", height=20)
+    line2 = HorizontalDivObj(background_color="#ffff33", width=150, height=30)
     text2 = TextObj("宋体", 20, "测试456")
     line.add(text)
-    line.add(text12)
-    page.add(line)
+    line.add(input)
+    v_con.add(line)
     line2.add(text2)
-    page.add(line2)
+    v_con.add(line2)
+
     page.update_bbox()
 
-    text_bbox = text.get_world_bbox()
-    text_bbox12 = text12.get_world_bbox()
-    bbox = text2.get_world_bbox()
+    text_bbox = text.get_text_world_bbox()
+    text_bbox12 = input.get_text_world_bbox()
+    bbox = text2.get_text_world_bbox()
     from utils import io
 
     io.save_html(os.path.join("../output", "0.html"), page)
     io.save_anno(os.path.join("../output", "0.txt"), [text_bbox, text_bbox12, bbox], \
-                 [text.text, text12.text, text2.text])
+                 [text.text, input.text, text2.text])
